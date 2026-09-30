@@ -9,11 +9,16 @@ say() { printf '\n== %s\n' "$*"; }; die() { printf '\n!! %s\n' "$*" >&2; exit 1;
 mkdir -p "$HOME/.ssh"; chmod 700 "$HOME/.ssh"
 say "1/4 Read-only deploy key for $REPO"
 [ -f "$KEY" ] || ssh-keygen -q -t ed25519 -N "" -C "$(hostname)-$REPO-deploy" -f "$KEY"
-grep -q "Host $HOST\$" "$HOME/.ssh/config" 2>/dev/null || printf '\nHost %s\n  HostName github.com\n  User git\n  IdentityFile %s\n  IdentitiesOnly yes\n' "$HOST" "$KEY" >> "$HOME/.ssh/config"
+# GitHub over port 443 (ssh.github.com) - works even where outbound port 22 is blocked
+touch "$HOME/.ssh/config"; sed -i "/^Host $HOST\$/,/IdentitiesOnly yes/d" "$HOME/.ssh/config"
+printf '\nHost %s\n  HostName ssh.github.com\n  Port 443\n  User git\n  IdentityFile %s\n  IdentitiesOnly yes\n' "$HOST" "$KEY" >> "$HOME/.ssh/config"
 chmod 600 "$HOME/.ssh/config" "$KEY"
-if ! ssh -o StrictHostKeyChecking=accept-new -T "$HOST" 2>&1 | grep -q "successfully authenticated"; then
-  echo; echo "ADD THIS LINE on GitHub -> $REPO -> Settings -> Deploy keys (write access OFF), then run again:"; echo; cat "$KEY.pub"; exit 2
+OUT=$(ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 -T "$HOST" 2>&1 || true)
+if ! echo "$OUT" | grep -q "successfully authenticated"; then
+  echo "GitHub said: $OUT" | tail -3
+  echo; echo "If the key is not on GitHub yet, ADD THIS LINE on GitHub -> $REPO -> Settings -> Deploy keys (write access OFF), then run again:"; echo; cat "$KEY.pub"; exit 2
 fi
+echo "GitHub access OK"
 say "2/4 App folder"
 if [ ! -d "$APP" ]; then git clone -q "$URL" "$APP"; echo "fresh clone -> $APP"
 else
