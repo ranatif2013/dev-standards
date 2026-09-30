@@ -28,9 +28,13 @@ else
   git remote get-url origin >/dev/null 2>&1 && git remote set-url origin "$URL" || git remote add origin "$URL"
   git fetch -q origin main
   say "3/4 Is this server's code on GitHub?"
-  TREE=$(git rev-parse 'HEAD^{tree}')
-  MATCH=$(git log --format='%H %T' origin/main | awk -v t="$TREE" '$2==t{print $1; exit}')
+  # Match on app code only: documentation (*.md, docs/, .planning/) may differ.
+  MATCH=""
+  for c in $(git rev-list --max-count=300 origin/main); do
+    if git diff --quiet HEAD "$c" -- . ':(exclude)*.md' ':(exclude)docs/' ':(exclude).planning/'; then MATCH=$c; break; fi
+  done
   [ -n "$MATCH" ] || die "Server code matches no commit on GitHub main. Nothing changed - ask Claude to reconcile (git diff --stat HEAD origin/main)."
+  DOCS=$(git diff --name-only HEAD "$MATCH" | tr '\n' ' '); [ -z "$DOCS" ] || echo "only docs differ: $DOCS"
   echo "matches GitHub commit $(git log --oneline -1 "$MATCH")"
   say "4/4 Link (no rebuild, running app untouched)"
   BK="$HOME/ops/backups/link-$REPO-$(date +%Y%m%d_%H%M%S)"; mkdir -p "$BK"; git rev-parse HEAD > "$BK/prev-sha"
