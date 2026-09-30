@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# machine03: get a project into ~/projects/<repo> (or update it). Usage: ops-clone <repo> [owner]
+set -euo pipefail
+REPO="${1:?Usage: ops-clone <repo> [owner]}"; OWNER="${2:-ranatif2013}"; DIR="$HOME/projects/$REPO"
+if [ -d "$DIR/.git" ]; then git -C "$DIR" fetch -q origin && echo "updated: $DIR"; else git clone -q "git@github.com:$OWNER/$REPO.git" "$DIR" && echo "cloned: $DIR"; fi
+git -C "$DIR" config user.name "$(hostname) agent"; git -C "$DIR" config user.email "$(hostname)@agents.local"
+[ -f "$DIR/AGENTS.md" ] || echo "NOTE: $REPO has no AGENTS.md yet -> cd $DIR && ops-adopt"

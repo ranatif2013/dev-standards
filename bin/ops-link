@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# machine02 (PRODUCTION), once per project: read-only GitHub access + link the app folder to main.
+# Usage: ops-link <repo> <app_dir> [owner]
+# Safe: never changes running code. If the folder has code GitHub doesn't have, it stops.
+set -euo pipefail
+REPO="${1:?Usage: ops-link <repo> <app_dir> [owner]}"; APP="${2:?app dir}"; OWNER="${3:-ranatif2013}"
+HOST="gh-$REPO"; KEY="$HOME/.ssh/deploy_$REPO"; URL="git@$HOST:$OWNER/$REPO.git"
+say() { printf '\n== %s\n' "$*"; }; die() { printf '\n!! %s\n' "$*" >&2; exit 1; }
+mkdir -p "$HOME/.ssh"; chmod 700 "$HOME/.ssh"
+say "1/4 Read-only deploy key for $REPO"
+[ -f "$KEY" ] || ssh-keygen -q -t ed25519 -N "" -C "$(hostname)-$REPO-deploy" -f "$KEY"
+grep -q "Host $HOST\$" "$HOME/.ssh/config" 2>/dev/null || printf '\nHost %s\n  HostName github.com\n  User git\n  IdentityFile %s\n  IdentitiesOnly yes\n' "$HOST" "$KEY" >> "$HOME/.ssh/config"
+chmod 600 "$HOME/.ssh/config" "$KEY"
+if ! ssh -o StrictHostKeyChecking=accept-new -T "$HOST" 2>&1 | grep -q "successfully authenticated"; then
+  echo; echo "ADD THIS LINE on GitHub -> $REPO -> Settings -> Deploy keys (write access OFF), then run again:"; echo; cat "$KEY.pub"; exit 2
+fi
+say "2/4 App folder"
+if [ ! -d "$APP" ]; then git clone -q "$URL" "$APP"; echo "fresh clone -> $APP"
+else
+  cd "$APP"
+  [ -d .git ] || die "$APP exists but is not a git repo. Nothing changed - ask Claude to reconcile."
+  [ -z "$(git status --porcelain --untracked-files=no)" ] || { git status --short --untracked-files=no | head -30; die "uncommitted changes in $APP - commit them to GitHub first. Nothing changed."; }
+  git remote get-url origin >/dev/null 2>&1 && git remote set-url origin "$URL" || git remote add origin "$URL"
+  git fetch -q origin main
+  say "3/4 Is this server's code on GitHub?"
+  TREE=$(git rev-parse 'HEAD^{tree}')
+  MATCH=$(git log --format='%H %T' origin/main | awk -v t="$TREE" '$2==t{print $1; exit}')
+  [ -n "$MATCH" ] || die "Server code matches no commit on GitHub main. Nothing changed - ask Claude to reconcile (git diff --stat HEAD origin/main)."
+  echo "matches GitHub commit $(git log --oneline -1 "$MATCH")"
+  say "4/4 Link (no rebuild, running app untouched)"
+  BK="$HOME/ops/backups/link-$REPO-$(date +%Y%m%d_%H%M%S)"; mkdir -p "$BK"; git rev-parse HEAD > "$BK/prev-sha"
+  git checkout -q -B main "$MATCH"; git branch -q -u origin/main
+fi
+CFG="$HOME/ops/projects/$REPO.env"
+if [ ! -f "$CFG" ]; then
+  cat > "$CFG" <<CFGEOF
+APP_DIR="$APP"
+INSTALL_CMD="npm ci --no-audit --no-fund"
+BUILD_CMD="npm run build"
+RESTART_CMD="pm2 restart $REPO --update-env"
+HEALTH_URL=""            # e.g. http://127.0.0.1:3001/api/health
+PUBLIC_URL=""            # e.g. https://example.com/login (must return 200)
+DB_DUMP_CMD=""           # e.g. sudo -u postgres pg_dump -Fc mydb
+MIGRATION_PATHS="drizzle/ migrations/ prisma/migrations/"
+MIGRATE_CMD=""           # e.g. npx drizzle-kit push
+PRE_DEPLOY_CMD=""        # project-specific guard, runs in APP_DIR
+EXTRA_CHECK_CMD=""       # project-specific check after restart, must exit 0
+CFGEOF
+  echo "Created $CFG - fill HEALTH_URL etc. (Claude/Codex can do it)"
+fi
+echo "DONE. $REPO linked to GitHub main. Deploy with: ops-deploy $REPO"

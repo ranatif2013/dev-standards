@@ -1,0 +1,30 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Node project checks (skipped if no package.json)
+        if: hashFiles('package.json') != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - if: hashFiles('package.json') != ''
+        run: npm ci --ignore-scripts
+      - if: hashFiles('package.json') != ''
+        run: npm run check --if-present
+      - if: hashFiles('package.json') != ''
+        run: npm run lint --if-present
+      - if: hashFiles('package.json') != ''
+        run: npm run build --if-present
+        env:
+          CI: "true"
+      - name: Python project checks (skipped if no requirements.txt)
+        if: hashFiles('requirements.txt') != ''
+        run: |
+          python3 -m pip install -q -r requirements.txt pytest
+          if [ -d tests ] && ls tests/*.py >/dev/null 2>&1; then python3 -m pytest -q; else python3 -m compileall -q .; fi

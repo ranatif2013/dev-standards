@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# machine02 (PRODUCTION): deploy GitHub main of a project. Backup -> build -> restart -> checks -> auto-rollback.
+# Rule: only green CI + Rana's explicit OK.
+# Usage: ops-deploy <project> [--allow-migration]      (migration only after Rana wrote "approved")
+#        ops-deploy <project> --rollback <backup_dir>
+set -Eeuo pipefail
+P="${1:?Usage: ops-deploy <project> [--allow-migration | --rollback DIR]}"; CFG="$HOME/ops/projects/$P.env"
+[ -f "$CFG" ] || { echo "no config $CFG (run ops-link first)"; exit 1; }
+# shellcheck disable=SC1090
+. "$CFG"
+say() { printf '\n== %s\n' "$*"; }; die() { printf '\n!! %s\n' "$*" >&2; exit 1; }
+check() {
+  [ -z "$HEALTH_URL" ] || curl -fsS -m 10 "$HEALTH_URL" >/dev/null
+  [ -z "$PUBLIC_URL" ] || [ "$(curl -s -m 15 -o /dev/null -w '%{http_code}' "$PUBLIC_URL")" = 200 ]
+  [ -z "$EXTRA_CHECK_CMD" ] || bash -c "cd \"$APP_DIR\" && $EXTRA_CHECK_CMD"
+}
+rollback() {
+  local BK="$1"; trap - ERR; set +e; cd "$APP_DIR"; say "ROLLBACK from $BK"
+  git checkout -q -B main "$(cat "$BK/prev-sha")" && echo "code -> $(git log --oneline -1)"
+  for f in .env .env.local .env.production; do [ -f "$BK/$f" ] && cp -a "$BK/$f" "$f"; done
+  if [ -d "$BK/node_modules-prev" ]; then rm -rf node_modules; mv "$BK/node_modules-prev" node_modules; fi
+  if [ -d "$BK/next-prev" ]; then rm -rf .next; cp -a "$BK/next-prev" .next; fi
+  [ -z "$RESTART_CMD" ] || bash -c "$RESTART_CMD" >/dev/null; sleep 8
+  check && echo "health OK after rollback" || echo "!! health still failing - tell Claude/Rana now"
+}
+[ "${2:-}" = "--rollback" ] && { rollback "${3:?backup dir}"; exit 0; }
+ALLOW_MIG=0; [ "${2:-}" = "--allow-migration" ] && ALLOW_MIG=1
+
+say "0/6 Preflight ($P)"; cd "$APP_DIR"
+[ "$(git branch --show-current)" = main ] || die "not on main (run ops-link first)"
+[ -z "$(git status --porcelain --untracked-files=no)" ] || { git status --short --untracked-files=no; die "uncommitted changes on server - commit to GitHub first"; }
+git fetch -q origin main
+PREV=$(git rev-parse HEAD); NEW=$(git rev-parse origin/main)
+[ "$PREV" != "$NEW" ] || { echo "already up to date: $(git log --oneline -1)"; exit 0; }
+git log --oneline "$PREV..$NEW"
+CHANGED=$(git diff --name-only "$PREV" "$NEW")
+MIG=0; for d in $MIGRATION_PATHS; do echo "$CHANGED" | grep -q "^$d" && MIG=1; done
+[ $MIG = 0 ] || [ $ALLOW_MIG = 1 ] || die "This release has a DB migration. Needs Rana's 'approved' -> rerun with --allow-migration. Nothing changed."
+LOCK=0; echo "$CHANGED" | grep -qE '^(package-lock\.json|package\.json|yarn\.lock|pnpm-lock\.yaml|requirements\.txt)$' && LOCK=1
+
+BK="$HOME/ops/backups/deploy-$P-$(date +%Y%m%d_%H%M%S)"
+say "1/6 Backup -> $BK"
+mkdir -p "$BK"; chmod 700 "$BK"; echo "$PREV" > "$BK/prev-sha"
+for f in .env .env.local .env.production; do [ -f "$f" ] && cp -a "$f" "$BK/$f"; done
+[ -d .next ] && cp -a .next "$BK/next-prev"
+[ $LOCK = 1 ] && [ -d node_modules ] && cp -al node_modules "$BK/node_modules-prev"
+[ -z "$DB_DUMP_CMD" ] || bash -c "$DB_DUMP_CMD" > "$BK/db.dump"
+trap '[ "$BASHPID" = "$$" ] || exit 1; trap - ERR; echo; echo "!! step failed - rolling back"; rollback "$BK"; exit 1' ERR
+[ -z "$PRE_DEPLOY_CMD" ] || bash -c "$PRE_DEPLOY_CMD"
+
+say "2/6 Code -> $(git log --oneline -1 "$NEW")"; git checkout -q -B main "$NEW"; git branch -q -u origin/main
+say "3/6 Dependencies"; if [ $LOCK = 1 ] && [ -n "$INSTALL_CMD" ]; then bash -c "$INSTALL_CMD" > "$BK/install.log" 2>&1 || { tail -20 "$BK/install.log"; false; }; else echo "unchanged - skipped"; fi
+if [ $ALLOW_MIG = 1 ] && [ -n "$MIGRATE_CMD" ]; then say "3b/6 Migration"; bash -c "$MIGRATE_CMD" > "$BK/migrate.log" 2>&1 || { tail -20 "$BK/migrate.log"; false; }; fi
+say "4/6 Build"; [ -z "$BUILD_CMD" ] || { bash -c "$BUILD_CMD" > "$BK/build.log" 2>&1 || { tail -30 "$BK/build.log"; false; }; }
+say "5/6 Restart"; [ -z "$RESTART_CMD" ] || bash -c "$RESTART_CMD" >/dev/null; sleep 8
+say "6/6 Checks"; check
+trap - ERR; command -v pm2 >/dev/null && pm2 save >/dev/null || true
+echo "DONE: $P @ $(git log --oneline -1). Backup: $BK"
+echo "Rollback: ops-deploy $P --rollback $BK"

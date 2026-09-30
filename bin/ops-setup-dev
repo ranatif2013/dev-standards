@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# machine03 (DEVELOPMENT), once: one SSH key for the GitHub account -> agents can clone
+# every project and push branches. main stays safe via branch protection (PR + green CI).
+set -euo pipefail
+KEY="$HOME/.ssh/github_dev"
+mkdir -p "$HOME/.ssh"; chmod 700 "$HOME/.ssh"
+[ -f "$KEY" ] || ssh-keygen -q -t ed25519 -N "" -C "$(hostname)-dev" -f "$KEY"
+grep -q "# ops-dev-key" "$HOME/.ssh/config" 2>/dev/null || printf '\n# ops-dev-key\nHost github.com\n  User git\n  IdentityFile %s\n  IdentitiesOnly yes\n' "$KEY" >> "$HOME/.ssh/config"
+chmod 600 "$HOME/.ssh/config" "$KEY"
+if ssh -o StrictHostKeyChecking=accept-new -T git@github.com 2>&1 | grep -q "successfully authenticated"; then
+  echo "OK: $(hostname) can reach all your GitHub repos. Next: ops-clone <repo>"
+else
+  echo; echo "ADD THIS LINE on GitHub -> Settings (your profile) -> SSH and GPG keys -> New SSH key, then run ops-setup-dev again:"; echo; cat "$KEY.pub"; exit 2
+fi
