@@ -37,7 +37,7 @@ Har project ki settings: `~/ops/projects/<repo>.env` (health URL, build command,
 ## Naya project
 1. GitHub par repo banayein (ya purana).
 2. machine03: `ops-clone <repo> && cd ~/projects/<repo> && ops-adopt` -> PR merge.
-3. GitHub -> repo -> Settings -> Branches -> rule for `main`: "Require a pull request" + "Require status checks (check)".
+3. `main` protection: on the free GitHub plan, branch rules are NOT enforced on private repos. Protection = AGENTS.md rules + CI. If any agent ever pushes to `main` directly, upgrade to GitHub Pro and add the rule (PR + status check `check`).
 4. Live karna ho to machine02: `ops-link <repo> <app_dir>`, phir `ops-deploy <repo>`.
 
 ## Template (`template/`)
