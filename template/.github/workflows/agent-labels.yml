@@ -1,0 +1,29 @@
+name: Agent labels
+# Creates the task-board labels once (and keeps colours in sync). Safe to re-run.
+on:
+  push:
+    branches: [main, master]
+    paths: [".github/workflows/agent-labels.yml"]
+  workflow_dispatch:
+permissions:
+  issues: write
+jobs:
+  labels:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = [
+              ["task", "ededed", "Agent task (lead creates it)"],
+              ["codex", "1d76db", "Assigned to Codex"],
+              ["claude", "d97706", "Assigned to Claude"],
+              ["nexora", "0e8a16", "Assigned to NEXORA (machine03)"],
+              ["in-progress", "fbca04", "An agent is working on it"],
+              ["blocked", "b60205", "Needs Rana or another task first"],
+              ["needs-review", "5319e7", "PR open, lead must review"],
+            ];
+            for (const [name, color, description] of labels) {
+              try { await github.rest.issues.createLabel({ ...context.repo, name, color, description }); core.info(`created ${name}`); }
+              catch (e) { await github.rest.issues.updateLabel({ ...context.repo, name, color, description }); core.info(`updated ${name}`); }
+            }

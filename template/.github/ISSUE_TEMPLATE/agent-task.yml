@@ -1,0 +1,27 @@
+name: Agent task
+description: One task for one agent (created by the lead, usually Claude)
+title: "[task] "
+labels: ["task"]
+body:
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Agent
+      description: Who does this task (also set the matching label)
+      options: [codex, claude, nexora]
+    validations: { required: true }
+  - type: textarea
+    id: goal
+    attributes: { label: Goal, description: What must be true when done (1-3 lines) }
+    validations: { required: true }
+  - type: textarea
+    id: scope
+    attributes: { label: Files / area, description: Files or folders the agent may touch. Nothing else. }
+    validations: { required: true }
+  - type: textarea
+    id: done
+    attributes: { label: Done when, description: Checks that prove it (tests, commands, screens) }
+    validations: { required: true }
+  - type: textarea
+    id: notes
+    attributes: { label: Notes / risks }

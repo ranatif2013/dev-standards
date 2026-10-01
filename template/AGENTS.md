@@ -25,6 +25,13 @@ Project: <PROJECT NAME> — <one line what it does>. Live URL: <url or "not live
 6. Commit, push the branch, open a PR to `main`. CI must be green; Rana merges.
 7. After merge: update `.planning/STATE.md` (In progress -> Done, next steps). Keep it under ~120 lines.
 
+## 3b. Task board (GitHub Issues) — how work is assigned
+- **Lead = Claude.** Rana gives the idea to Claude; Claude plans it and opens one Issue per task (template "Agent task") with a label: `codex`, `claude` or `nexora`.
+- **Take only issues with your label.** Add label `in-progress` and a comment "taking this" before you start. Do not take an issue that is already `in-progress`.
+- Branch `<agent>/issue-<number>-<short>`; PR body must contain `Closes #<number>`. Touch only the files listed in the issue's "Files / area".
+- When the PR is open: add label `needs-review` on the issue. The lead reviews every PR; Rana only merges and approves deploys.
+- Stuck or need a decision: label `blocked` + a comment saying exactly what is needed.
+
 ## 4. Deploy (production)
 - Only `main`, only green CI, only with Rana's explicit OK: `ops-deploy <project>` on machine02 (backup, build, health check, auto-rollback).
 - DB schema changes: Rana's literal "approved" + backup. Never destructive (no DROP / DELETE of real data).
