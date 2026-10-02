@@ -14,4 +14,4 @@ Before any code, file edit, or deploy, Claude's FIRST reply in a session must st
 - More than one small task = `/lead` (Claude leads; NEXORA + Codex get Issues): open Issues first, one per task, labelled `codex` / `nexora` / `claude`. Claude only does `claude` issues itself.
 - Never push work to a branch without an Issue + PR (`Closes #n`). CI job "task-board-guard" will fail it.
 - This rule applies even if the user did not type /lead (old `/gsd` = same thing), and wins over any older workflow text in this repo.
-- Use the `lead` skill (Rana's team workflow, NOT the third-party GSD framework); state files are `.planning/`. Load only the skill the current step needs.
+- Use the `lead` skill: Claude leads, runs the `gsd` skill for the development structure (phases in `.planning/`), and splits each phase into Issues for nexora / codex / claude. Load only the skill the current step needs.
