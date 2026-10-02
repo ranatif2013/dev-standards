@@ -36,6 +36,14 @@ Project: <PROJECT NAME> — <one line what it does>. Live URL: <url or "not live
 - Only `main`, only green CI, only with Rana's explicit OK: `ops-deploy <project>` on machine02 (backup, build, health check, auto-rollback).
 - DB schema changes: Rana's literal "approved" + backup. Never destructive (no DROP / DELETE of real data).
 
+## 4b. Every service survives a reboot (Rana, 2026-10-03)
+Any new service or pipeline on ANY server (machine02, machine03, ...) is created from day one with all four:
+1. **systemd unit** (`Restart=always`, `systemctl enable`). No hand-started screen/tmux/nohup processes. Docker containers: `restart: unless-stopped`, and Docker itself enabled at boot.
+2. **Unit file kept in the repo** (`ops/systemd/`), installed by a script, never edited only on the server.
+3. **Health check entry**: add the service/container/port to the server's `ops/<machine>/health.conf` (checker: `ops/bin/rana-health.sh`, runs 2 min after boot, then every 10 min).
+4. **Alert path**: a DOWN result must reach Rana (Telegram/e-mail, log file until Telegram is configured). Errors in a pipeline also send an alert.
+Before any reboot: list what runs on the box, show Rana the table, wait for his OK. Never stop/delete other projects' services.
+
 ## 5. Never
 - Never commit secrets (.env, keys, passwords, tokens) or put them in STATE.md or chat.
 - Never delete or overwrite another agent's work.

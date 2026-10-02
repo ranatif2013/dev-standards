@@ -1,0 +1,7 @@
+[Unit]
+Description=Rana health check (services, containers, GPU, certs, disk)
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/rana-ops/bin/rana-health.sh
