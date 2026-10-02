@@ -1,0 +1,11 @@
+[Unit]
+Description=Rana health check: 2 min after boot, then every 10 min
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=10min
+AccuracySec=15s
+Unit=rana-healthcheck.service
+
+[Install]
+WantedBy=timers.target
