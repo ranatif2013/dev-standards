@@ -1,0 +1,27 @@
+name: task-board-guard
+# Fails a PR unless it says "Closes #<n>" and issue n has an agent label (codex/claude/nexora).
+# Exception: PRs whose branch starts with "standards/" (task-board setup itself).
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+permissions:
+  issues: read
+  pull-requests: read
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (pr.head.ref.startsWith('standards/')) { core.info('setup PR, skipped'); return; }
+            const m = (pr.body || '').match(/(?:closes|fixes|resolves)\s+#(\d+)/i);
+            if (!m) core.setFailed('PR must contain "Closes #<issue>" for a task Issue (see AGENTS.md 3b).');
+            else {
+              const { data: issue } = await github.rest.issues.get({ ...context.repo, issue_number: +m[1] });
+              const names = issue.labels.map(l => l.name);
+              if (!names.some(n => ['codex','claude','nexora'].includes(n)))
+                core.setFailed(`Issue #${m[1]} has no agent label (codex/claude/nexora).`);
+              else core.info(`ok: #${m[1]} -> ${names.join(',')}`);
+            }

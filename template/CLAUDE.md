@@ -1,5 +1,17 @@
 @AGENTS.md
 
-## Claude-specific
-- Use the `gsd` skill; its state files are `.planning/`.
-- Load only the skill the current step needs.
+## Claude-specific — SESSION START RULE (mandatory, every session, every repo)
+Before any code, file edit, or deploy, Claude's FIRST reply in a session must start with this table:
+
+| Lead check | Status |
+|---|---|
+| Task-board setup in repo (AGENTS.md, Agent task template, agent labels, task-board-guard) | yes / added in PR #.. |
+| Open task Issues for this work (#numbers) | ... |
+| Assigned: codex / nexora / claude | ... |
+| Branches with work but no PR | none / list |
+
+- If setup is missing: the first PR adds it from dev-standards `template/` (never overwrite existing files). No feature code before that PR is open.
+- More than one small task = `/gsd lead`: open Issues first, one per task, labelled `codex` / `nexora` / `claude`. Claude only does `claude` issues itself.
+- Never push work to a branch without an Issue + PR (`Closes #n`). CI job "task-board-guard" will fail it.
+- This rule applies even if the user did not type /gsd, and wins over any older workflow text in this repo.
+- Use the `gsd` skill; its state files are `.planning/`. Load only the skill the current step needs.

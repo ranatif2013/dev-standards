@@ -30,6 +30,7 @@ Project: <PROJECT NAME> — <one line what it does>. Live URL: <url or "not live
 - **Take only issues with your label.** Add label `in-progress` and a comment "taking this" before you start. Do not take an issue that is already `in-progress`.
 - Branch `<agent>/issue-<number>-<short>`; PR body must contain `Closes #<number>`. Touch only the files listed in the issue's "Files / area".
 - When the PR is open: add label `needs-review` on the issue. The lead reviews every PR; Rana only merges and approves deploys.
+- PRs without `Closes #n` to a labelled task Issue fail CI (`task-board-guard`). Only `standards/*` setup branches are exempt.
 - Stuck or need a decision: label `blocked` + a comment saying exactly what is needed.
 
 ## 4. Deploy (production)
