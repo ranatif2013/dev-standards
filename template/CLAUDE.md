@@ -11,7 +11,7 @@ Before any code, file edit, or deploy, Claude's FIRST reply in a session must st
 | Branches with work but no PR | none / list |
 
 - If setup is missing: the first PR adds it from dev-standards `template/` (never overwrite existing files). No feature code before that PR is open.
-- More than one small task = `/gsd lead`: open Issues first, one per task, labelled `codex` / `nexora` / `claude`. Claude only does `claude` issues itself.
+- More than one small task = `/lead` (Claude leads; NEXORA + Codex get Issues): open Issues first, one per task, labelled `codex` / `nexora` / `claude`. Claude only does `claude` issues itself.
 - Never push work to a branch without an Issue + PR (`Closes #n`). CI job "task-board-guard" will fail it.
-- This rule applies even if the user did not type /gsd, and wins over any older workflow text in this repo.
-- Use the `gsd` skill; its state files are `.planning/`. Load only the skill the current step needs.
+- This rule applies even if the user did not type /lead (old `/gsd` = same thing), and wins over any older workflow text in this repo.
+- Use the `lead` skill (Rana's team workflow, NOT the third-party GSD framework); state files are `.planning/`. Load only the skill the current step needs.
