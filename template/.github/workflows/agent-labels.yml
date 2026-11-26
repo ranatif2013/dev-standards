@@ -18,7 +18,7 @@ jobs:
               ["task", "ededed", "Agent task (lead creates it)"],
               ["codex", "1d76db", "Assigned to Codex"],
               ["claude", "d97706", "Assigned to Claude"],
-              ["nexora", "0e8a16", "Assigned to NEXORA (machine03)"],
+              ["aider", "0e8a16", "Aider + local Ollama on Machine-03 (on-prem; was the nexora label, not NEXORA-OS)"],
               ["in-progress", "fbca04", "An agent is working on it"],
               ["blocked", "b60205", "Needs Rana or another task first"],
               ["needs-review", "5319e7", "PR open, lead must review"],
