@@ -1,5 +1,5 @@
 name: task-board-guard
-# Fails a PR unless it says "Closes #<n>" and issue n has an agent label (codex/claude/nexora).
+# Fails a PR unless it says "Closes #<n>" and issue n has an agent label (codex/claude/nexora/aider).
 # Exception: PRs whose branch starts with "standards/" (task-board setup itself).
 on:
   pull_request:
@@ -21,7 +21,7 @@ jobs:
             else {
               const { data: issue } = await github.rest.issues.get({ ...context.repo, issue_number: +m[1] });
               const names = issue.labels.map(l => l.name);
-              if (!names.some(n => ['codex','claude','nexora'].includes(n)))
-                core.setFailed(`Issue #${m[1]} has no agent label (codex/claude/nexora).`);
+              if (!names.some(n => ['codex','claude','nexora','aider'].includes(n)))
+                core.setFailed(`Issue #${m[1]} has no agent label (codex/claude/nexora/aider).`);
               else core.info(`ok: #${m[1]} -> ${names.join(',')}`);
             }

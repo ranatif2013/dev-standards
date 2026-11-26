@@ -1,4 +1,4 @@
-# AGENTS.md — rules for every AI agent on this repo (Claude, Codex, NEXORA, any other)
+# AGENTS.md — rules for every AI agent on this repo (Claude, Codex, Aider, any other)
 
 Standard: github.com/ranatif2013/dev-standards (same rules in every project).
 Owner: Rana (not a developer). He gives ideas and approvals; agents do all technical work.
@@ -17,7 +17,7 @@ Project: <PROJECT NAME> — <one line what it does>. Live URL: <url or "not live
 - No tgz snapshots, patch files or `.bak` copies as a way of moving code. If an emergency hotfix is made on a server, commit it to `main` the same day.
 
 ## 3. How to make any change
-1. `git pull` on `main`, then branch `<agent>/<short-task>` (e.g. `nexora/sms-reminder`, `codex/fix-login`, `claude/new-report`).
+1. `git pull` on `main`, then branch `<agent>/<short-task>` (e.g. `aider/sms-reminder`, `codex/fix-login`, `claude/new-report`).
 2. Claim it: one line under "In progress" in `.planning/STATE.md` (agent | branch | files/area | date). If another agent claimed the same files, stop and tell Rana.
 3. Smallest change that solves the task. No unrelated refactors.
 4. Run the project checks (`npm run check` and `npm run lint` for Node projects). Must pass.
@@ -26,7 +26,7 @@ Project: <PROJECT NAME> — <one line what it does>. Live URL: <url or "not live
 7. After merge: update `.planning/STATE.md` (In progress -> Done, next steps). Keep it under ~120 lines.
 
 ## 3b. Task board (GitHub Issues) — how work is assigned
-- **Lead = Claude.** Rana gives the idea to Claude; Claude plans it and opens one Issue per task (template "Agent task") with a label: `codex`, `claude` or `nexora`.
+- **Lead = Claude.** Rana gives the idea to Claude; Claude plans it and opens one Issue per task (template "Agent task") with a label: `codex`, `claude` or `aider` (Aider + local Ollama on Machine-03; formerly `nexora`).
 - **Take only issues with your label.** Add label `in-progress` and a comment "taking this" before you start. Do not take an issue that is already `in-progress`.
 - Branch `<agent>/issue-<number>-<short>`; PR body must contain `Closes #<number>`. Touch only the files listed in the issue's "Files / area".
 - When the PR is open: add label `needs-review` on the issue. The lead reviews every PR; Rana only merges and approves deploys.
